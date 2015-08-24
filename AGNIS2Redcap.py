@@ -2,6 +2,8 @@ import xlwt, xlrd, xlutils
 import argparse
 import re
 import csv
+import zipfile
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument("metadata_xls", help="filename")
@@ -13,15 +15,10 @@ agnis_wb = xlrd.open_workbook(args.metadata_xls)
 agnis_ws = agnis_wb.sheet_by_name('Sheet0')
 agnis_head = [c.value for c in agnis_ws.row(10)]
 
-# instrument.csv
-out = open('instrument.csv', 'wb')
-wr = csv.writer(out, quoting=csv.QUOTE_ALL)
-
 head = [u"Variable / Field Name", u"Form Name", u"Section Header", u"Field Type", u"Field Label", u"Choices, Calculations, OR Slider Labels",
         u"Field Note", u"Text Validation Type OR Show Slider Number", u"Text Validation Min", u"Text Validation Max", u"Identifier?",
         u"Branching Logic (Show field only if...)", u"Required Field?", u"Custom Alignment", u"Question Number (surveys only)",
         u"Matrix Group Name", u"Matrix Ranking?", u"Field Annotation"]
-wr.writerow(head)
 
 content = []
 
@@ -37,6 +34,7 @@ for agnis_nrow in range(11, agnis_ws.nrows):
     nmod = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Module Display Order')).value
     nqst = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Question Display Order')).value
     cdepid = agnis_ws.cell(agnis_nrow, agnis_head.index(u'CDE Public ID')).value
+    cderev = agnis_ws.cell(agnis_nrow, agnis_head.index(u'CDE Version')).value
     qst_long_name = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Question Long Name')).value
     data_type = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Data Type')).value
     valid_val = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Valid Value')).value
@@ -49,7 +47,7 @@ for agnis_nrow in range(11, agnis_ws.nrows):
         content.append({k: u'' for k in head})
         content[nrow][u"Form Name"] = form_name
 
-        redcapid = "f%sm%dq%dcde%d" % (form_id, int(nmod), int(nqst), int(cdepid))
+        redcapid = "f{0}m{1}q{2}cde{3}rev{4}".format(form_id, int(nmod), int(nqst), int(cdepid), int(cderev))
         content[nrow][u"Variable / Field Name"] = redcapid
         content[nrow][u"Section Header"] = section_header
         content[nrow][u"Field Label"] = qst_long_name.rstrip(":")
@@ -81,6 +79,11 @@ for agnis_nrow in range(11, agnis_ws.nrows):
 
 
 # write csv
+out = open('instrument.csv', 'wb')
+wr = csv.writer(out, quoting=csv.QUOTE_ALL)
+
+wr.writerow(head)
+
 for r in content:
     row = []
     for k in head:
@@ -88,3 +91,10 @@ for r in content:
     wr.writerow(row)
 out.close()
 
+# compress csv
+zf = zipfile.ZipFile('instrument.zip', mode='w')
+zf.write('instrument.csv')
+zf.close()
+
+# remove csv
+os.remove('instrument.csv')

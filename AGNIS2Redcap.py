@@ -26,6 +26,9 @@ form_name = agnis_ws.cell(0, 1).value
 form_id = form_name.split(" - ")[0].replace(" ", "").replace("Revision", "r")
 form_name = re.sub('[^A-Za-z0-9]+', '_', form_name)
 
+form_pid = agnis_ws.cell(6, 1).value
+form_ver = agnis_ws.cell(7, 1).value
+
 section_header = u""
 nrow = -1
 choices = []
@@ -33,8 +36,12 @@ for agnis_nrow in range(11, agnis_ws.nrows):
 
     nmod = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Module Display Order')).value
     nqst = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Question Display Order')).value
-    cdepid = agnis_ws.cell(agnis_nrow, agnis_head.index(u'CDE Public ID')).value
-    cderev = agnis_ws.cell(agnis_nrow, agnis_head.index(u'CDE Version')).value
+    if agnis_ws.cell(agnis_nrow, agnis_head.index(u'Module Public ID')).value:
+        mod_pid = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Module Public ID')).value
+    if agnis_ws.cell(agnis_nrow, agnis_head.index(u'Module Version')).value:
+        mod_ver = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Module Version')).value
+    q_pid = agnis_ws.cell(agnis_nrow, agnis_head.index(u'CDE Public ID')).value
+    q_ver = agnis_ws.cell(agnis_nrow, agnis_head.index(u'CDE Version')).value
     qst_long_name = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Question Long Name')).value
     data_type = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Data Type')).value
     valid_val = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Valid Value')).value
@@ -42,13 +49,16 @@ for agnis_nrow in range(11, agnis_ws.nrows):
     val_meaning_pubid = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Value Meaning Public ID')).value
     display_format = agnis_ws.cell(agnis_nrow, agnis_head.index(u'Display Format')).value
 
-    if cdepid:
+    if q_pid:
         nrow += 1
         content.append({k: u'' for k in head})
         content[nrow][u"Form Name"] = form_name
 
-        redcapid = "f{0}m{1}q{2}cde{3}rev{4}".format(form_id, int(nmod), int(nqst), int(cdepid), int(cderev))
+        redcapid = "f{0}m{1}q{2}cde{3}rev{4}".format(form_id, int(nmod), int(nqst), int(q_pid), int(q_ver))
+        redcapmodxid = "{0}_{1};{2}_{3};{4}_{5};".format(int(form_pid), form_ver, int(mod_pid), mod_ver, int(q_pid), q_ver)
+
         content[nrow][u"Variable / Field Name"] = redcapid
+        content[nrow][u"Field Annotation"] = redcapmodxid
         content[nrow][u"Section Header"] = section_header
         content[nrow][u"Field Label"] = qst_long_name.rstrip(":")
 
@@ -76,7 +86,6 @@ for agnis_nrow in range(11, agnis_ws.nrows):
                 content[nrow - 1][u"Choices, Calculations, OR Slider Labels"] = choices
                 content[nrow - 1][u"Field Type"] = "radio"
         choices = []
-
 
 # write csv
 out = open('instrument.csv', 'wb')
